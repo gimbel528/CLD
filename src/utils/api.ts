@@ -1,0 +1,88 @@
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+export interface ChatRequest {
+  model: string
+  messages: ChatMessage[]
+  stream: boolean
+}
+
+const SYSTEM_PROMPT = `你是一个顶级的系统动力学和系统思考专家。用户将提供一张因果回路图（CLD）的文本结构数据和问题。
+请基于图中要素的因果关系（'+'表示同向变化，'-'表示反向变化）进行深度分析。
+你的回答需包含：
+1. 识别出的回路类型（增强回路 R 或 调节回路 B）。
+2. 针对用户问题的深度解答。
+3. 建议新增的缺失要素及连线建议（以文本描述形式）。
+4. 系统破局点（杠杆点）建议。`
+
+export async function streamChat(
+  messages: ChatMessage[],
+  onChunk: (text: string) => void,
+  onDone: () => void,
+  onError: (error: string) => void
+) {
+  try {
+    const allMessages: ChatMessage[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages
+    ]
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'Qwen/Qwen2.5-7B-Instruct',
+        messages: allMessages,
+        stream: true,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`请求失败: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法读取响应流')
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') {
+            onDone()
+            return
+          }
+          try {
+            const parsed = JSON.parse(data)
+            const content = parsed.choices?.[0]?.delta?.content || ''
+            if (content) {
+              onChunk(content)
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    }
+
+    onDone()
+  } catch (error: any) {
+    onError(error.message || '未知错误')
+  }
+}

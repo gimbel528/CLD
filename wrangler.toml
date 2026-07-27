@@ -1,0 +1,6 @@
+name = "cld-ai"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+[vars]
+SILICONFLOW_API_KEY = "your-api-key-here"
