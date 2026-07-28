@@ -42,7 +42,23 @@ export async function streamChat(
     })
 
     if (!response.ok) {
-      throw new Error(`请求失败: ${response.status}`)
+      let errorMsg = `请求失败: ${response.status}`
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          errorMsg = errorData.error
+        }
+      } catch {
+        try {
+          const errorText = await response.text()
+          if (errorText) {
+            errorMsg = errorText
+          }
+        } catch {
+          // ignore
+        }
+      }
+      throw new Error(errorMsg)
     }
 
     const reader = response.body?.getReader()
