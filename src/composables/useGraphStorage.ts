@@ -11,27 +11,39 @@ export interface SavedGraph {
 
 const STORAGE_KEY = 'cld-saved-graphs'
 
-export function useGraphStorage() {
-  const savedGraphs = ref<SavedGraph[]>([])
+const savedGraphs = ref<SavedGraph[]>([])
+let initialized = false
 
-  const loadSavedGraphs = () => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        savedGraphs.value = JSON.parse(stored)
-      }
-    } catch (e) {
-      console.error('加载保存的图表失败:', e)
+const loadSavedGraphs = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      savedGraphs.value = JSON.parse(stored)
+    } else {
       savedGraphs.value = []
     }
+    initialized = true
+  } catch (e) {
+    console.error('加载保存的图表失败:', e)
+    savedGraphs.value = []
+  }
+}
+
+const saveGraphs = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedGraphs.value))
+  } catch (e) {
+    console.error('保存图表失败:', e)
+  }
+}
+
+export function useGraphStorage() {
+  if (!initialized) {
+    loadSavedGraphs()
   }
 
-  const saveGraphs = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedGraphs.value))
-    } catch (e) {
-      console.error('保存图表失败:', e)
-    }
+  const refreshFromStorage = () => {
+    loadSavedGraphs()
   }
 
   const saveCurrentGraph = (name: string, data: GraphData): SavedGraph => {
@@ -75,11 +87,9 @@ export function useGraphStorage() {
     return savedGraphs.value.find(g => g.id === id)
   }
 
-  loadSavedGraphs()
-
   return {
     savedGraphs,
-    loadSavedGraphs,
+    refreshFromStorage,
     saveCurrentGraph,
     updateGraph,
     renameGraph,
@@ -87,3 +97,4 @@ export function useGraphStorage() {
     getGraph,
   }
 }
+

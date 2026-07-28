@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useGraphStorage } from '@/composables/useGraphStorage'
 import type { GraphData } from '@/composables/useFlowData'
 import type { SavedGraph } from '@/composables/useGraphStorage'
@@ -17,7 +17,13 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
-const { savedGraphs, saveCurrentGraph, deleteGraph, renameGraph } = useGraphStorage()
+const { savedGraphs, refreshFromStorage, saveCurrentGraph, deleteGraph, renameGraph } = useGraphStorage()
+
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    refreshFromStorage()
+  }
+})
 
 const activeTab = ref<'list' | 'save'>('list')
 const saveName = ref('')
