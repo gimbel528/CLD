@@ -19,9 +19,11 @@ const SYSTEM_PROMPT = `你是一个顶级的系统动力学和系统思考专家
 
 export async function streamChat(
   messages: ChatMessage[],
+  model: string,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  signal?: AbortSignal
 ) {
   try {
     const allMessages: ChatMessage[] = [
@@ -35,10 +37,11 @@ export async function streamChat(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'Qwen/Qwen2.5-7B-Instruct',
+        model: model,
         messages: allMessages,
         stream: true,
       }),
+      signal,
     })
 
     if (!response.ok) {
@@ -68,11 +71,14 @@ export async function streamChat(
 
     const decoder = new TextDecoder()
     let buffer = ''
+    let chunkCount = 0
+    const MAX_CHUNKS = 10000
 
-    while (true) {
+    while (chunkCount < MAX_CHUNKS) {
       const { done, value } = await reader.read()
       if (done) break
 
+      chunkCount++
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
@@ -99,6 +105,10 @@ export async function streamChat(
 
     onDone()
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      onDone()
+      return
+    }
     onError(error.message || '未知错误')
   }
 }

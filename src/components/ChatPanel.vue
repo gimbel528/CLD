@@ -9,11 +9,22 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const models = [
+  { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek V3 (推荐)' },
+  { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B (高质量)' },
+  { id: 'Qwen/Qwen2.5-14B-Instruct', name: 'Qwen2.5 14B (均衡)' },
+  { id: 'Qwen/Qwen2.5-7B-Instruct', name: 'Qwen2.5 7B (免费)' },
+  { id: 'zai-org/GLM-5.2', name: 'GLM 5.2 (最新)' },
+]
+
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
 const chatContainerRef = ref<HTMLDivElement | null>(null)
 const currentReply = ref('')
+const selectedModel = ref('deepseek-ai/DeepSeek-V3')
+const abortController = ref<AbortController | null>(null)
+const showModelDropdown = ref(false)
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -30,6 +41,21 @@ watch(messages, () => {
 watch(currentReply, () => {
   scrollToBottom()
 })
+
+const stopGeneration = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+  if (currentReply.value) {
+    messages.value.push({
+      role: 'assistant',
+      content: currentReply.value
+    })
+  }
+  currentReply.value = ''
+  isLoading.value = false
+}
 
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
@@ -54,8 +80,11 @@ const sendMessage = async () => {
     }
   }
 
+  abortController.value = new AbortController()
+
   await streamChat(
     userMessages,
+    selectedModel.value,
     (chunk) => {
       currentReply.value += chunk
     },
@@ -68,6 +97,7 @@ const sendMessage = async () => {
       }
       currentReply.value = ''
       isLoading.value = false
+      abortController.value = null
     },
     (error) => {
       messages.value.push({
@@ -76,7 +106,9 @@ const sendMessage = async () => {
       })
       currentReply.value = ''
       isLoading.value = false
-    }
+      abortController.value = null
+    },
+    abortController.value.signal
   )
 }
 
@@ -88,8 +120,21 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 const clearChat = () => {
+  if (isLoading.value) {
+    stopGeneration()
+  }
   messages.value = []
   currentReply.value = ''
+}
+
+const selectModel = (modelId: string) => {
+  selectedModel.value = modelId
+  showModelDropdown.value = false
+}
+
+const currentModelName = () => {
+  const model = models.find(m => m.id === selectedModel.value)
+  return model ? model.name : selectedModel.value
 }
 </script>
 
@@ -104,18 +149,56 @@ const clearChat = () => {
         </div>
         <div>
           <h3 class="text-cld-text font-medium">AI 系统分析</h3>
-          <p class="text-cld-text-muted text-xs">基于系统动力学</p>
+          <div class="relative">
+            <button
+              @click="showModelDropdown = !showModelDropdown"
+              class="text-cld-text-muted text-xs hover:text-cld-accent transition-colors flex items-center gap-1"
+            >
+              {{ currentModelName() }}
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div
+              v-if="showModelDropdown"
+              class="absolute top-full left-0 mt-1 w-48 bg-cld-surface border border-cld-border rounded-lg shadow-xl z-50 py-1"
+            >
+              <button
+                v-for="model in models"
+                :key="model.id"
+                @click="selectModel(model.id)"
+                :class="[
+                  'w-full px-3 py-2 text-left text-sm hover:bg-cld-bg transition-colors',
+                  selectedModel === model.id ? 'text-cld-accent bg-cld-accent/10' : 'text-cld-text'
+                ]"
+              >
+                {{ model.name }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <button
-        @click="clearChat"
-        class="p-1.5 rounded-md text-cld-text-muted hover:text-cld-text hover:bg-cld-border/50 transition-colors"
-        title="清空对话"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-        </svg>
-      </button>
+      <div class="flex items-center gap-1">
+        <button
+          v-if="isLoading"
+          @click="stopGeneration"
+          class="p-1.5 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
+          title="停止生成"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+        </button>
+        <button
+          @click="clearChat"
+          class="p-1.5 rounded-md text-cld-text-muted hover:text-cld-text hover:bg-cld-border/50 transition-colors"
+          title="清空对话"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div ref="chatContainerRef" class="flex-1 overflow-y-auto p-4 space-y-4">
