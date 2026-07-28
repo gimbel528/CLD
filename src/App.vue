@@ -3,11 +3,14 @@ import { ref, computed } from 'vue'
 import FlowCanvas from '@/components/FlowCanvas.vue'
 import Toolbar from '@/components/Toolbar.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
+import GraphManager from '@/components/GraphManager.vue'
 import { useFlowData } from '@/composables/useFlowData'
 import type { GraphData } from '@/composables/useFlowData'
+import type { SavedGraph } from '@/composables/useGraphStorage'
 
 const flowCanvasRef = ref<InstanceType<typeof FlowCanvas> | null>(null)
 const selectedEdgeId = ref<string | null>(null)
+const showGraphManager = ref(false)
 const { graphData, setGraphData, convertToCausalText } = useFlowData()
 
 const causalText = computed(() => convertToCausalText(graphData.value))
@@ -41,6 +44,14 @@ const handleSetPolarity = (polarity: 'S' | 'O') => {
     flowCanvasRef.value?.setEdgePolarity(selectedEdgeId.value, polarity)
   }
 }
+
+const handleOpenGraphManager = () => {
+  showGraphManager.value = true
+}
+
+const handleLoadGraph = (graph: SavedGraph) => {
+  flowCanvasRef.value?.loadGraphData(graph.data)
+}
 </script>
 
 <template>
@@ -51,6 +62,7 @@ const handleSetPolarity = (polarity: 'S' | 'O') => {
       @delete="handleDelete"
       @clear="handleClear"
       @export="handleExport"
+      @open-graphs="handleOpenGraphManager"
       @set-polarity="handleSetPolarity"
     />
 
@@ -83,5 +95,12 @@ const handleSetPolarity = (polarity: 'S' | 'O') => {
         <ChatPanel :causal-text="causalText" />
       </div>
     </div>
+
+    <GraphManager
+      :visible="showGraphManager"
+      :current-graph-data="graphData"
+      @close="showGraphManager = false"
+      @load="handleLoadGraph"
+    />
   </div>
 </template>

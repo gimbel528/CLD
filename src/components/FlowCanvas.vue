@@ -364,6 +364,17 @@ const getGraphData = (): GraphData => {
   return lf.getGraphData() as GraphData
 }
 
+const loadGraphData = (data: GraphData) => {
+  if (!lf) return
+  lf.render(data)
+  nextTick(() => {
+    const newData = lf?.getGraphData()
+    if (newData) {
+      emit('data-change', newData as GraphData)
+    }
+  })
+}
+
 const exportToPdf = async () => {
   if (!lf || !containerRef.value) return
 
@@ -502,6 +513,7 @@ defineExpose({
   clearCanvas,
   setEdgePolarity,
   getGraphData,
+  loadGraphData,
   getSelectedEdgeId,
   exportToPdf,
 })

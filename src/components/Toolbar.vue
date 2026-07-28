@@ -10,6 +10,7 @@ const emit = defineEmits<{
   (e: 'delete'): void
   (e: 'clear'): void
   (e: 'export'): void
+  (e: 'open-graphs'): void
   (e: 'set-polarity', polarity: 'S' | 'O'): void
 }>()
 </script>
@@ -63,14 +64,27 @@ const emit = defineEmits<{
       </button>
 
       <button
+        @click="emit('open-graphs')"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-cld-text hover:bg-cld-border/50 transition-colors"
+        title="我的图表"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+        </svg>
+        <span>我的图表</span>
+      </button>
+
+      <div class="h-6 w-px bg-cld-border mx-1"></div>
+
+      <button
         @click="emit('export')"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-cld-text hover:bg-cld-border/50 transition-colors"
-        title="导出数据"
+        title="导出PDF"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
-        <span>导出</span>
+        <span>导出PDF</span>
       </button>
     </div>
 
