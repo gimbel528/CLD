@@ -368,7 +368,6 @@ const exportToPdf = async () => {
   if (!lf || !containerRef.value) return
 
   try {
-    const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF } = await import('jspdf')
 
     const graphData = lf.getGraphData() as GraphData
@@ -415,40 +414,81 @@ const exportToPdf = async () => {
 
     await nextTick()
 
-    const targetElement = containerRef.value.querySelector('.lf-canvas-overlay') as HTMLElement || containerRef.value
+    const svgElement = containerRef.value.querySelector('svg') as SVGSVGElement
+    if (!svgElement) {
+      throw new Error('找不到 SVG 元素')
+    }
 
-    const canvasResult = await html2canvas(targetElement, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      logging: false,
+    const svgClone = svgElement.cloneNode(true) as SVGSVGElement
+    const bbox = svgElement.getBBox()
+    const width = bbox.width + 100
+    const height = bbox.height + 100
+
+    svgClone.setAttribute('width', width.toString())
+    svgClone.setAttribute('height', height.toString())
+    svgClone.setAttribute('viewBox', `${bbox.x - 50} ${bbox.y - 50} ${width} ${height}`)
+
+    const styleElement = document.createElement('style')
+    const styles: string[] = []
+    document.querySelectorAll('style').forEach(style => {
+      const text = style.textContent || ''
+      if (text.includes('lf-') || text.includes('logicflow') || text.includes('cld-')) {
+        styles.push(text)
+      }
     })
+    styleElement.textContent = styles.join('\n')
+    svgClone.insertBefore(styleElement, svgClone.firstChild)
+
+    const svgData = new XMLSerializer().serializeToString(svgClone)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = url
+    })
+
+    const scale = 2
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.scale(scale, scale)
+    ctx.drawImage(img, 0, 0, width, height)
+
+    URL.revokeObjectURL(url)
 
     ;(lf as any).translate(originalTransform.x, originalTransform.y)
     ;(lf as any).zoom(originalTransform.zoom)
 
     const imgWidth = 210
     const pageHeight = 297
-    const imgHeight = (canvasResult.height * imgWidth) / canvasResult.width
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
 
     const pdf = new jsPDF('p', 'mm', 'a4')
     let heightLeft = imgHeight
     let position = 0
 
-    pdf.addImage(canvasResult.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
 
     while (heightLeft >= 0) {
       position = heightLeft - imgHeight
       pdf.addPage()
-      pdf.addImage(canvasResult.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
     }
 
     pdf.save(`cld-graph-${Date.now()}.pdf`)
-  } catch (error) {
+  } catch (error: any) {
     console.error('导出 PDF 失败:', error)
-    alert('导出 PDF 失败，请重试')
+    alert(`导出 PDF 失败：${error.message || '未知错误'}`)
   }
 }
 
