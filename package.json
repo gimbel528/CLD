@@ -11,6 +11,8 @@
   "dependencies": {
     "@logicflow/core": "^2.0.0",
     "@logicflow/extension": "^2.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "vue": "^3.4.0"
   },
   "devDependencies": {

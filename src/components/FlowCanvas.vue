@@ -364,6 +364,94 @@ const getGraphData = (): GraphData => {
   return lf.getGraphData() as GraphData
 }
 
+const exportToPdf = async () => {
+  if (!lf || !containerRef.value) return
+
+  try {
+    const { default: html2canvas } = await import('html2canvas')
+    const { default: jsPDF } = await import('jspdf')
+
+    const graphData = lf.getGraphData() as GraphData
+    const allNodes = graphData.nodes || []
+    const allEdges = graphData.edges || []
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    allNodes.forEach((node: any) => {
+      const w = node.width || 120
+      const h = node.height || 50
+      minX = Math.min(minX, node.x - w / 2 - 50)
+      minY = Math.min(minY, node.y - h / 2 - 50)
+      maxX = Math.max(maxX, node.x + w / 2 + 50)
+      maxY = Math.max(maxY, node.y + h / 2 + 50)
+    })
+    allEdges.forEach((edge: any) => {
+      if (edge.startPoint) {
+        minX = Math.min(minX, edge.startPoint.x - 20)
+        minY = Math.min(minY, edge.startPoint.y - 20)
+        maxX = Math.max(maxX, edge.startPoint.x + 20)
+        maxY = Math.max(maxY, edge.startPoint.y + 20)
+      }
+      if (edge.endPoint) {
+        minX = Math.min(minX, edge.endPoint.x - 20)
+        minY = Math.min(minY, edge.endPoint.y - 20)
+        maxX = Math.max(maxX, edge.endPoint.x + 20)
+        maxY = Math.max(maxY, edge.endPoint.y + 20)
+      }
+    })
+
+    if (!isFinite(minX)) {
+      minX = 0; minY = 0; maxX = 800; maxY = 600
+    }
+
+    const canvasData = (lf as any).getTransform()
+    const originalTransform = {
+      x: canvasData?.x || 0,
+      y: canvasData?.y || 0,
+      zoom: canvasData?.scale || 1,
+    }
+
+    ;(lf as any).resetZoom()
+    ;(lf as any).fitView(50, 50)
+
+    await nextTick()
+
+    const targetElement = containerRef.value.querySelector('.lf-canvas-overlay') as HTMLElement || containerRef.value
+
+    const canvasResult = await html2canvas(targetElement, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    })
+
+    ;(lf as any).translate(originalTransform.x, originalTransform.y)
+    ;(lf as any).zoom(originalTransform.zoom)
+
+    const imgWidth = 210
+    const pageHeight = 297
+    const imgHeight = (canvasResult.height * imgWidth) / canvasResult.width
+
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    let heightLeft = imgHeight
+    let position = 0
+
+    pdf.addImage(canvasResult.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(canvasResult.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    pdf.save(`cld-graph-${Date.now()}.pdf`)
+  } catch (error) {
+    console.error('导出 PDF 失败:', error)
+    alert('导出 PDF 失败，请重试')
+  }
+}
+
 const getSelectedEdgeId = (): string | null => {
   return selectedEdgeId.value
 }
@@ -375,6 +463,7 @@ defineExpose({
   setEdgePolarity,
   getGraphData,
   getSelectedEdgeId,
+  exportToPdf,
 })
 
 watch(selectedEdgeId, (newVal) => {
