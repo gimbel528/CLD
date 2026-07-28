@@ -10,11 +10,16 @@ interface Props {
 const props = defineProps<Props>()
 
 const models = [
+  { id: 'deepseek-ai/DeepSeek-V4-Pro', name: 'DeepSeek V4 Pro (最新)' },
+  { id: 'deepseek-ai/DeepSeek-V4-Flash', name: 'DeepSeek V4 Flash (快速)' },
   { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek V3 (推荐)' },
-  { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B (高质量)' },
-  { id: 'Qwen/Qwen2.5-14B-Instruct', name: 'Qwen2.5 14B (均衡)' },
-  { id: 'Qwen/Qwen2.5-7B-Instruct', name: 'Qwen2.5 7B (免费)' },
-  { id: 'zai-org/GLM-5.2', name: 'GLM 5.2 (最新)' },
+  { id: 'deepseek-ai/DeepSeek-V3.2', name: 'DeepSeek V3.2' },
+  { id: 'zai-org/GLM-5.2', name: 'GLM 5.2 (智谱)' },
+  { id: 'Pro/zai-org/GLM-5.1', name: 'GLM 5.1 (智谱Pro)' },
+  { id: 'Pro/moonshotai/Kimi-K2.6', name: 'Kimi K2.6 (月之暗面Pro)' },
+  { id: 'moonshotai/Kimi-K2.7-Code', name: 'Kimi K2.7-Code (代码)' },
+  { id: 'MiniMaxAI/MiniMax-M2.5', name: 'MiniMax M2.5 (免费)' },
+  { id: 'Pro/MiniMaxAI/MiniMax-M2.5', name: 'MiniMax M2.5 (Pro版)' },
 ]
 
 const messages = ref<ChatMessage[]>([])
@@ -22,7 +27,7 @@ const inputText = ref('')
 const isLoading = ref(false)
 const chatContainerRef = ref<HTMLDivElement | null>(null)
 const currentReply = ref('')
-const selectedModel = ref('deepseek-ai/DeepSeek-V3')
+const selectedModel = ref('deepseek-ai/DeepSeek-V4-Pro')
 const abortController = ref<AbortController | null>(null)
 const showModelDropdown = ref(false)
 
