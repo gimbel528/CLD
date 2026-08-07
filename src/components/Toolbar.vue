@@ -1,6 +1,7 @@
 <script setup lang="ts">
 interface Props {
   selectedEdgeId: string | null
+  currentGraphName: string | null
 }
 
 const props = defineProps<Props>()
@@ -10,6 +11,7 @@ const emit = defineEmits<{
   (e: 'delete'): void
   (e: 'clear'): void
   (e: 'export'): void
+  (e: 'save'): void
   (e: 'open-graphs'): void
   (e: 'set-polarity', polarity: 'S' | 'O'): void
 }>()
@@ -72,6 +74,18 @@ const emit = defineEmits<{
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
         </svg>
         <span>我的图表</span>
+      </button>
+
+      <button
+        v-if="props.currentGraphName"
+        @click="emit('save')"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-cld-accent border border-cld-accent/30 hover:bg-cld-accent/10 transition-colors"
+        :title="`保存到「${props.currentGraphName}」`"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+        </svg>
+        <span>保存</span>
       </button>
 
       <div class="h-6 w-px bg-cld-border mx-1"></div>

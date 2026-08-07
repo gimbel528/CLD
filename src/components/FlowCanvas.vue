@@ -368,10 +368,21 @@ const loadGraphData = (data: GraphData) => {
   if (!lf) return
   lf.render(data)
   nextTick(() => {
-    const newData = lf?.getGraphData()
-    if (newData) {
-      emit('data-change', newData as GraphData)
+    const allData = lf?.getGraphData() as any
+    if (allData?.nodes) {
+      allData.nodes.forEach((node: any) => {
+        const nodeModel = lf?.getNodeModelById(node.id) as any
+        if (nodeModel && nodeModel.resizeNodeByText) {
+          nodeModel.resizeNodeByText()
+        }
+      })
     }
+    nextTick(() => {
+      const newData = lf?.getGraphData()
+      if (newData) {
+        emit('data-change', newData as GraphData)
+      }
+    })
   })
 }
 

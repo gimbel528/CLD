@@ -15,6 +15,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'load', graph: SavedGraph): void
   (e: 'saved'): void
+  (e: 'overwrite-save', graph: SavedGraph): void
 }>()
 
 const { savedGraphs, refreshFromStorage, saveCurrentGraph, deleteGraph, renameGraph } = useGraphStorage()
@@ -60,6 +61,11 @@ const handleDelete = (graph: SavedGraph) => {
   if (confirm(`确定要删除「${graph.name}」吗？`)) {
     deleteGraph(graph.id)
   }
+}
+
+const handleOverwriteSave = (graph: SavedGraph) => {
+  emit('overwrite-save', graph)
+  emit('close')
 }
 
 const startRename = (graph: SavedGraph) => {
@@ -175,6 +181,13 @@ const cancelRename = () => {
                     title="加载此图表"
                   >
                     打开
+                  </button>
+                  <button
+                    @click="handleOverwriteSave(graph)"
+                    class="px-3 py-1.5 rounded-md text-sm text-cld-positive hover:bg-cld-positive/20 transition-colors"
+                    title="用当前画布覆盖保存到此图表"
+                  >
+                    覆盖保存
                   </button>
                   <button
                     @click="startRename(graph)"

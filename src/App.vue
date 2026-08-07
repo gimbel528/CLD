@@ -5,15 +5,22 @@ import Toolbar from '@/components/Toolbar.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import GraphManager from '@/components/GraphManager.vue'
 import { useFlowData } from '@/composables/useFlowData'
+import { useGraphStorage } from '@/composables/useGraphStorage'
 import type { GraphData } from '@/composables/useFlowData'
 import type { SavedGraph } from '@/composables/useGraphStorage'
 
 const flowCanvasRef = ref<InstanceType<typeof FlowCanvas> | null>(null)
 const selectedEdgeId = ref<string | null>(null)
 const showGraphManager = ref(false)
+const currentGraphId = ref<string | null>(null)
 const { graphData, setGraphData, convertToCausalText } = useFlowData()
+const { updateGraph, getGraph } = useGraphStorage()
 
 const causalText = computed(() => convertToCausalText(graphData.value))
+const currentGraphName = computed(() => {
+  if (!currentGraphId.value) return null
+  return getGraph(currentGraphId.value)?.name || null
+})
 
 const handleDataChange = (data: GraphData) => {
   setGraphData(data)
@@ -51,6 +58,19 @@ const handleOpenGraphManager = () => {
 
 const handleLoadGraph = (graph: SavedGraph) => {
   flowCanvasRef.value?.loadGraphData(graph.data)
+  currentGraphId.value = graph.id
+}
+
+const handleQuickSave = () => {
+  if (currentGraphId.value) {
+    updateGraph(currentGraphId.value, graphData.value)
+    showGraphManager.value = false
+  }
+}
+
+const handleOverwriteSave = (graph: SavedGraph) => {
+  updateGraph(graph.id, graphData.value)
+  currentGraphId.value = graph.id
 }
 </script>
 
@@ -58,10 +78,12 @@ const handleLoadGraph = (graph: SavedGraph) => {
   <div class="w-full h-full flex flex-col bg-cld-bg">
     <Toolbar
       :selected-edge-id="selectedEdgeId"
+      :current-graph-name="currentGraphName"
       @add-node="handleAddNode"
       @delete="handleDelete"
       @clear="handleClear"
       @export="handleExport"
+      @save="handleQuickSave"
       @open-graphs="handleOpenGraphManager"
       @set-polarity="handleSetPolarity"
     />
@@ -101,6 +123,7 @@ const handleLoadGraph = (graph: SavedGraph) => {
       :current-graph-data="graphData"
       @close="showGraphManager = false"
       @load="handleLoadGraph"
+      @overwrite-save="handleOverwriteSave"
     />
   </div>
 </template>
